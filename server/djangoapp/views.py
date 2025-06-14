@@ -305,4 +305,3 @@ def add_review(request):
             "status": 500,
             "message": "Error in posting review"
         })
-        
