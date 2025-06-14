@@ -14,7 +14,7 @@ import logging
 import json
 from django.views.decorators.csrf import csrf_exempt
 from .populate import initiate
-
+from .restapis import get_request, analyze_review_sentiments, post_review
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -109,12 +109,37 @@ def registration(request):
 
 #Update the `get_dealerships` render list of dealerships all by default, particular state if state is passed
 def get_dealerships(request, state="All"):
-    if(state == "All"):
-        endpoint = "/fetchDealers"
-    else:
-        endpoint = "/fetchDealers/"+state
-    dealerships = get_request(endpoint)
-    return JsonResponse({"status":200,"dealers":dealerships})
+    try:
+        logger.info(f"get_dealerships called with state: {state}")
+        
+        if(state == "All"):
+            endpoint = "/fetchDealers"
+        else:
+            endpoint = "/fetchDealers/"+state
+            
+        logger.info(f"Calling endpoint: {endpoint}")
+        
+        dealerships = get_request(endpoint)
+        
+        logger.info(f"Received dealerships: {dealerships}")
+        
+        if dealerships is None:
+            logger.error("get_request returned None")
+            return JsonResponse({
+                "status": 500,
+                "message": "Failed to fetch dealerships - external service unavailable",
+                "dealers": []
+            })
+            
+        return JsonResponse({"status": 200, "dealers": dealerships})
+        
+    except Exception as e:
+        logger.error(f"Error in get_dealerships: {str(e)}")
+        return JsonResponse({
+            "status": 500,
+            "message": f"Internal server error: {str(e)}",
+            "dealers": []
+        })
 
 def get_dealer_reviews(request, dealer_id):
     # if dealer id has been provided
