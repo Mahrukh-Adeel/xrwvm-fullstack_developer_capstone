@@ -191,7 +191,7 @@ def get_dealer_reviews(request, dealer_id):
                     else:
                         review_detail["sentiment"] = "neutral"
                 except Exception as e:
-                    error_msg = f"Error analyzing sentiment for review: {str(e)}"
+                    error_msg = f"Error analyzing: {str(e)}"
                     logger.error(error_msg)
                     review_detail["sentiment"] = "neutral"
 
@@ -305,3 +305,4 @@ def add_review(request):
             "status": 500,
             "message": "Error in posting review"
         })
+        
