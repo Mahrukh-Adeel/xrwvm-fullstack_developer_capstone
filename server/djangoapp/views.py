@@ -20,9 +20,7 @@ from .restapis import get_request, analyze_review_sentiments, post_request
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
-
 # Create your views here.
-
 
 def get_cars(request):
     count = CarMake.objects.filter().count()
@@ -40,7 +38,6 @@ def get_cars(request):
         )
     return JsonResponse({"CarModels": cars})
 
-
 # Create a `login_request` view to handle sign in request
 @csrf_exempt
 def login_user(request):
@@ -56,7 +53,6 @@ def login_user(request):
         login(request, user)
         data = {"userName": username, "status": "Authenticated"}
     return JsonResponse(data)
-
 
 # Create a `logout_request` view to handle sign out request
 @csrf_exempt
@@ -81,7 +77,6 @@ def logout_request(request):
     except Exception as e:
         logger.error(f"Error in logout_request: {str(e)}")
         return JsonResponse({"error": str(e), "status": "error"}, status=500)
-
 
 # Create a `registration` view to handle sign up request
 @csrf_exempt
@@ -123,7 +118,6 @@ def registration(request):
         data = {"userName": username, "error": "Already Registered"}
         return JsonResponse(data)
 
-
 # Update the `get_dealerships` render list of dealerships all by default,
 # particular state if state is passed
 def get_dealerships(request, state="All"):
@@ -163,7 +157,6 @@ def get_dealerships(request, state="All"):
             }
         )
 
-
 def get_dealer_reviews(request, dealer_id):
     try:
         # if dealer id has been provided
@@ -180,16 +173,18 @@ def get_dealer_reviews(request, dealer_id):
             for review_detail in reviews:
                 try:
                     if 'review' in review_detail and review_detail['review']:
-                        response = analyze_review_sentiments(review_detail["review"])
+                        response = analyze_review_sentiments(
+                            review_detail["review"]
+                        )
                         print(f"Sentiment analysis response: {response}")
                         if response and 'sentiment' in response:
                             review_detail["sentiment"] = response["sentiment"]
                         else:
-                            review_detail["sentiment"] = "neutral"  # Default sentiment
+                            review_detail["sentiment"] = "neutral"
                     else:
                         review_detail["sentiment"] = "neutral"
                 except Exception as e:
-                    logger.error(f"Error analyzing sentiment for review: {str(e)}")
+                    logger.error(f"Error analyzing sentiment: {str(e)}")
                     review_detail["sentiment"] = "neutral"
             
             logger.info(f"Returning {len(reviews)} reviews for dealer {dealer_id}")
@@ -199,8 +194,13 @@ def get_dealer_reviews(request, dealer_id):
     
     except Exception as e:
         logger.error(f"Error in get_dealer_reviews: {str(e)}")
-        return JsonResponse({"status": 500, "message": f"Internal server error: {str(e)}", "reviews": []})
-
+        return JsonResponse(
+            {
+                "status": 500,
+                "message": f"Internal server error: {str(e)}",
+                "reviews": [],
+            }
+        )
 
 def get_dealer_details(request, dealer_id):
     try:
@@ -217,8 +217,12 @@ def get_dealer_details(request, dealer_id):
     
     except Exception as e:
         logger.error(f"Error in get_dealer_details: {str(e)}")
-        return JsonResponse({"status": 500, "message": f"Internal server error: {str(e)}"})
-
+        return JsonResponse(
+            {
+                "status": 500,
+                "message": f"Internal server error: {str(e)}"
+            }
+        )
 
 @csrf_exempt
 def add_review(request):
@@ -234,10 +238,14 @@ def add_review(request):
         logger.info(f"Received review data: {data}")
         
         # Validate required fields
-        required_fields = ['name', 'dealership', 'review', 'car_make', 'car_model', 'car_year']
+        required_fields = [
+            'name', 'dealership', 'review', 'car_make', 'car_model', 'car_year'
+        ]
         for field in required_fields:
             if field not in data or not data[field]:
-                return JsonResponse({"status": 400, "message": f"Missing required field: {field}"})
+                return JsonResponse(
+                    {"status": 400, "message": f"Missing required field: {field}"}
+                )
         
         # Prepare the review data for the API call
         review_data = {
@@ -263,7 +271,9 @@ def add_review(request):
     except json.JSONDecodeError:
         return JsonResponse({"status": 400, "message": "Invalid JSON data"})
     except ValueError as e:
-        return JsonResponse({"status": 400, "message": f"Invalid data format: {str(e)}"})
+        return JsonResponse(
+            {"status": 400, "message": f"Invalid data format: {str(e)}"}
+        )
     except Exception as e:
         logger.error(f"Error in add_review: {str(e)}")
         return JsonResponse({
