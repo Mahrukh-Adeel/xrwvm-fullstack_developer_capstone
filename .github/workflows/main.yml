@@ -40,8 +40,11 @@ jobs:
           node-version: 18  # Updated to a more recent version
       - name: Install JSHint
         run: npm install jshint --global
+      - name: Create JSHint config
+        run: |
+          echo '{"esversion": 8, "node": true}' > .jshintrc
       - name: Run Linter
         run: |
-          # This command finds all JavaScript files recursively and runs JSHint on them with ES8 support
-          find ./server/database -name "*.js" -exec jshint --esversion=8 --node {} +
+          # This command finds all JavaScript files recursively and runs JSHint on them
+          find ./server/database -name "*.js" -exec jshint {} +
           echo "Linted all the js files successfully"
