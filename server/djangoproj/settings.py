@@ -1,3 +1,4 @@
+/*jshint esversion: 8 */
 """
 Django settings for djangoproj project.
 
