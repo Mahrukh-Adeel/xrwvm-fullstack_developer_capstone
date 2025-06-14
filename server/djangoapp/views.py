@@ -15,7 +15,7 @@ import logging
 import json
 from django.views.decorators.csrf import csrf_exempt
 from .populate import initiate
-from .restapis import get_request, analyze_review_sentiments
+from .restapis import get_request, analyze_review_sentiments, post_request
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -165,40 +165,108 @@ def get_dealerships(request, state="All"):
 
 
 def get_dealer_reviews(request, dealer_id):
-    # if dealer id has been provided
-    if dealer_id:
-        endpoint = "/fetchReviews/dealer/" + str(dealer_id)
-        reviews = get_request(endpoint)
-        for review_detail in reviews:
-            response = analyze_review_sentiments(review_detail["review"])
-            print(response)
-            review_detail["sentiment"] = response["sentiment"]
-        return JsonResponse({"status": 200, "reviews": reviews})
-    else:
-        return JsonResponse({"status": 400, "message": "Bad Request"})
+    try:
+        # if dealer id has been provided
+        if dealer_id:
+            endpoint = "/fetchReviews/dealer/" + str(dealer_id)
+            reviews = get_request(endpoint)
+            
+            # Handle case where reviews might be None or empty
+            if not reviews:
+                logger.info(f"No reviews found for dealer {dealer_id}")
+                return JsonResponse({"status": 200, "reviews": []})
+            
+            # Process sentiment analysis for each review
+            for review_detail in reviews:
+                try:
+                    if 'review' in review_detail and review_detail['review']:
+                        response = analyze_review_sentiments(review_detail["review"])
+                        print(f"Sentiment analysis response: {response}")
+                        if response and 'sentiment' in response:
+                            review_detail["sentiment"] = response["sentiment"]
+                        else:
+                            review_detail["sentiment"] = "neutral"  # Default sentiment
+                    else:
+                        review_detail["sentiment"] = "neutral"
+                except Exception as e:
+                    logger.error(f"Error analyzing sentiment for review: {str(e)}")
+                    review_detail["sentiment"] = "neutral"
+            
+            logger.info(f"Returning {len(reviews)} reviews for dealer {dealer_id}")
+            return JsonResponse({"status": 200, "reviews": reviews})
+        else:
+            return JsonResponse({"status": 400, "message": "Bad Request"})
+    
+    except Exception as e:
+        logger.error(f"Error in get_dealer_reviews: {str(e)}")
+        return JsonResponse({"status": 500, "message": f"Internal server error: {str(e)}", "reviews": []})
 
 
 def get_dealer_details(request, dealer_id):
-    if dealer_id:
-        endpoint = "/fetchDealer/" + str(dealer_id)
-        dealership = get_request(endpoint)
-        return JsonResponse({"status": 200, "dealer": dealership})
-    else:
-        return JsonResponse({"status": 400, "message": "Bad Request"})
+    try:
+        if dealer_id:
+            endpoint = "/fetchDealer/" + str(dealer_id)
+            dealership = get_request(endpoint)
+            
+            if not dealership:
+                return JsonResponse({"status": 404, "message": "Dealer not found"})
+            
+            return JsonResponse({"status": 200, "dealer": dealership})
+        else:
+            return JsonResponse({"status": 400, "message": "Bad Request"})
+    
+    except Exception as e:
+        logger.error(f"Error in get_dealer_details: {str(e)}")
+        return JsonResponse({"status": 500, "message": f"Internal server error: {str(e)}"})
 
 
+@csrf_exempt
 def add_review(request):
-    if not request.user.is_anonymous:
-        # data = json.loads(request.body)
-        try:
-            # response = post_review(data)
-            return JsonResponse({"status": 200})
-        except BaseException:
-            return JsonResponse(
-                {
-                    "status": 401,
-                    "message": "Error in posting review"
-                }
-            )
-    else:
-        return JsonResponse({"status": 403, "message": "Unauthorized"})
+    try:
+        if not request.user.is_authenticated:
+            return JsonResponse({"status": 403, "message": "Unauthorized"})
+        
+        if request.method != 'POST':
+            return JsonResponse({"status": 405, "message": "Method not allowed"})
+        
+        # Parse the JSON data from request body
+        data = json.loads(request.body)
+        logger.info(f"Received review data: {data}")
+        
+        # Validate required fields
+        required_fields = ['name', 'dealership', 'review', 'car_make', 'car_model', 'car_year']
+        for field in required_fields:
+            if field not in data or not data[field]:
+                return JsonResponse({"status": 400, "message": f"Missing required field: {field}"})
+        
+        # Prepare the review data for the API call
+        review_data = {
+            "name": data["name"],
+            "dealership": int(data["dealership"]),
+            "review": data["review"],
+            "purchase": data.get("purchase", True),
+            "purchase_date": data.get("purchase_date", ""),
+            "car_make": data["car_make"],
+            "car_model": data["car_model"],
+            "car_year": int(data["car_year"])
+        }
+        
+        # Call the API to post the review
+        response = post_request("/insert/review", review_data)
+        logger.info(f"API response: {response}")
+        
+        if response:
+            return JsonResponse({"status": 200, "message": "Review posted successfully"})
+        else:
+            return JsonResponse({"status": 500, "message": "Failed to post review"})
+            
+    except json.JSONDecodeError:
+        return JsonResponse({"status": 400, "message": "Invalid JSON data"})
+    except ValueError as e:
+        return JsonResponse({"status": 400, "message": f"Invalid data format: {str(e)}"})
+    except Exception as e:
+        logger.error(f"Error in add_review: {str(e)}")
+        return JsonResponse({
+            "status": 500,
+            "message": "Error in posting review"
+        })
