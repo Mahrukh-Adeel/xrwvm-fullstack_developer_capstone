@@ -1,3 +1,4 @@
+/*jshint esversion: 8 */
 """djangoproj URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
