@@ -196,7 +196,7 @@ def get_dealer_reviews(request, dealer_id):
                     review_detail["sentiment"] = "neutral"
 
             logger.info(f"Returning {len(reviews)} reviews for dealer "
-                       f"{dealer_id}")
+                        f"{dealer_id}")
             return JsonResponse({"status": 200, "reviews": reviews})
         else:
             return JsonResponse({"status": 400, "message": "Bad Request"})
