@@ -1,4 +1,5 @@
 # Uncomment the required imports before adding the code
+/*jshint esversion: 8 */
 
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse
