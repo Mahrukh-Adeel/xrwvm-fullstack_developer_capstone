@@ -1,4 +1,5 @@
 # Uncomment the imports before you add the code
+/*jshint esversion: 8 */
 from django.urls import path
 from django.conf.urls.static import static
 from django.conf import settings
